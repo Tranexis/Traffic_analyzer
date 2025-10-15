@@ -26,7 +26,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-st.title("🚦 Traffic Analytics — By Category (Time / Spatial / Trends / Correlation)")
+st.title("🚦 Traffic Analytics")
 st.caption("Focus on the selected month with zoomable visuals. Supports STL seasonal/trend decomposition and correlation analysis with external factors.")
 
 # =============================
@@ -183,7 +183,10 @@ TAB_TIME, TAB_SPATIAL, TAB_TREND = st.tabs([
 
 # ---------- 時間分析 ----------
 with TAB_TIME:
-    st.subheader("Focus on Selected Month (Switch Year/Granularity/Extreme Markers)")
+    st.subheader(
+        "Focus on Selected Month", 
+        help="Switch Year, Granularity (Hourly/Daily), and set markers for extreme values."
+    )
     if 'datetime' not in _df.columns:
         st.info("No datetime available.")
     else:
@@ -261,7 +264,7 @@ with TAB_TIME:
                     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-    st.subheader("(Optional) Seasonal/Trend Decomposition — Single Axis Control (Synced Panes)")
+    st.subheader("Seasonal/Trend Decomposition")
     if 'datetime' in _df.columns:
         month_num = month_names.index(selected_month) + 1
         df_m = _df[_df['datetime'].dt.month == month_num].copy()
