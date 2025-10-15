@@ -177,8 +177,8 @@ st.markdown("---")
 # =============================
 # 5) Tabs by Category
 # =============================
-TAB_TIME, TAB_SPATIAL, TAB_TREND, TAB_CORR = st.tabs([
-    "⏱️ Time Analysis", "📍 Spatial Analysis", "📈 Trend Analysis", "🔗 Correlation Analysis"
+TAB_TIME, TAB_SPATIAL, TAB_TREND = st.tabs([
+    "⏱️ Time Analysis", "📍 Spatial Analysis", "📈 Trend Analysis"
 ])
 
 # ---------- 時間分析 ----------
@@ -368,29 +368,61 @@ with TAB_SPATIAL:
     
     # Check for necessary columns
     if {'latitude', 'longitude', 'traffic_volume'}.issubset(_df.columns):
+        
+        # --- 新增：地圖類型選擇 ---
+        map_type = st.radio(
+            "Select Map Type",
+            ["Heatmap", "Scatterplot"],
+            index=0,
+            horizontal=True,
+            help=(
+                "**Heatmap**: Shows the density of traffic volume in an area. Good for identifying general hotspots.\n\n"
+                "**Scatterplot**: Shows each individual data point, colored by its traffic volume. Good for detailed analysis."
+            )
+        )
+
         c1, c2 = st.columns([2, 1])
         with c1:
+            # Filter out data with no lat/lon for the map to prevent errors
+            map_df = _df[['longitude', 'latitude', 'traffic_volume']].dropna()
+            
+            # --- 動態選擇圖層 ---
+            if map_type == "Heatmap":
+                layer = pdk.Layer(
+                    'HeatmapLayer',
+                    data=map_df,
+                    get_position='[longitude, latitude]',
+                    get_weight='traffic_volume',
+                    opacity=0.8,
+                    pickable=False
+                )
+                tooltip = None
+            else: # Scatterplot
+                layer = pdk.Layer(
+                    'ScatterplotLayer',
+                    data=map_df,
+                    get_position='[longitude, latitude]',
+                    get_fill_color='[255, (1 - traffic_volume / 10000) * 255, 0, 140]', # Color by volume
+                    get_radius='(traffic_volume / 80) + 50', # Size by volume (Increased)
+                    pickable=True,
+                    radius_min_pixels=3, # Increased min size
+                    radius_max_pixels=100,
+                )
+                tooltip = {
+                    "html": "<b>Traffic Volume:</b> {traffic_volume}",
+                    "style": { "color": "white" }
+                }
+
             st.pydeck_chart(pdk.Deck(
                 map_style='mapbox://styles/mapbox/light-v9',
                 initial_view_state=pdk.ViewState(
-                    latitude=_df['latitude'].mean(),
-                    longitude=_df['longitude'].mean(),
+                    latitude=map_df['latitude'].mean(),
+                    longitude=map_df['longitude'].mean(),
                     zoom=9,
-                    pitch=50,
+                    pitch=45 if map_type == "Scatterplot" else 0, # Heatmap is better in 2D
                 ),
-                layers=[
-                    pdk.Layer(
-                        'HexagonLayer',
-                        data=_df[['longitude', 'latitude', 'traffic_volume']].dropna(),
-                        get_position='[longitude, latitude]',
-                        radius=200,
-                        elevation_scale=4,
-                        elevation_range=[0, 1000],
-                        pickable=True,
-                        extruded=True,
-                    ),
-                ],
-                tooltip={"text": "Volume in this area: {elevationValue}"}
+                layers=[layer],
+                tooltip=tooltip
             ))
         with c2:
             st.info("""
@@ -399,6 +431,7 @@ with TAB_SPATIAL:
             - **Height**: Taller bars indicate higher total volume in that area.
             - **Interaction**: You can zoom, pan, and rotate the map to view details.
             """)
+            # --- Metrics moved here to ensure they reflect all filters ---
             if 'region_name' in _df.columns:
                 st.metric("Number of Regions Covered", _df['region_name'].nunique())
             st.metric("Geographical Points", f"{len(_df[['latitude', 'longitude']].dropna()):,}")
@@ -515,66 +548,3 @@ with TAB_TREND:
         st.plotly_chart(fig_heatmap, use_container_width=True)
     else:
         st.info("Missing 'dow', 'hour', or 'average_speed' columns, cannot draw heatmap.")
-
-# ---------- 相關性分析 ----------
-with TAB_CORR:
-    st.subheader("Upload & Merge External Factors (Weather/Events/Road Conditions...)")
-    st.caption("Upload a CSV (must have a time column), select alignment granularity and correlation method to see the impact on traffic/speed.")
-    up = st.file_uploader("Upload external factors CSV", type=['csv'])
-    if up is None:
-        st.info("No external factors file uploaded yet.")
-    else:
-        ext = pd.read_csv(up)
-        ext_cols = list(ext.columns)
-        dt_col = st.selectbox("Select datetime column in CSV", ext_cols)
-        try:
-            ext[dt_col] = pd.to_datetime(ext[dt_col], errors='coerce')
-        except Exception:
-            st.error("Could not parse the datetime column. Please check the format.")
-            st.stop()
-        ext = ext.dropna(subset=[dt_col]).sort_values(dt_col)
-
-        c1, c2 = st.columns(2)
-        freq = c1.selectbox("Align by", ["Hourly", "Daily"], index=0)
-        method = c2.selectbox("Correlation method", ["pearson", "spearman"], index=0)
-
-        rule = 'H' if freq == "Hourly" else 'D'
-        base = (_df.set_index('datetime').sort_index()
-                  .resample(rule).agg({'traffic_volume': 'mean', 'average_speed': 'mean', 'incidents': 'sum'}))
-        ext_r = (ext.set_index(dt_col).sort_index().resample(rule).mean())
-        join = base.join(ext_r, how='inner')
-
-        num_cols = join.select_dtypes(include=[np.number]).columns.tolist()
-        exclude = ['traffic_volume', 'average_speed', 'incidents']
-        ext_feats = [c for c in num_cols if c not in exclude]
-        if not ext_feats:
-            st.warning("No usable numeric external features found.")
-        else:
-            corr_v = join[ext_feats + ['traffic_volume']].corr(method=method)['traffic_volume'].drop('traffic_volume')
-            corr_s = join[ext_feats + ['average_speed']].corr(method=method)['average_speed'].drop('average_speed')
-            b1, b2 = st.columns(2)
-            with b1:
-                fig = px.bar(corr_v.sort_values(), x=corr_v.sort_values().values, y=corr_v.sort_values().index,
-                             orientation='h', title=f'Correlation with Traffic Volume ({method})', labels={'x': 'corr', 'y': ''})
-                fig.update_layout(height=460)
-                st.plotly_chart(fig, use_container_width=True)
-            with b2:
-                fig = px.bar(corr_s.sort_values(), x=corr_s.sort_values().values, y=corr_s.sort_values().index,
-                             orientation='h', title=f'Correlation with Average Speed ({method})', labels={'x': 'corr', 'y': ''})
-                fig.update_layout(height=460)
-                st.plotly_chart(fig, use_container_width=True)
-
-            st.markdown("---")
-            st.subheader("Relationship View (with trendline)")
-            y_target = st.selectbox("Target", ['traffic_volume', 'average_speed'], index=0)
-            x_feat = st.selectbox("External feature", ext_feats, index=0)
-            fig = px.scatter(join.reset_index(), x=x_feat, y=y_target, trendline='ols', opacity=0.6,
-                             title=f"{x_feat} vs {y_target} ({freq})")
-            fig.update_layout(height=520)
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.markdown("---")
-            st.subheader("Merged Data (for download)")
-            st.dataframe(join.reset_index().head(1000))
-            st.download_button("Download merged CSV", data=to_csv_bytes(join.reset_index()),
-                               file_name=f"merged_{freq.lower()}_external.csv")
