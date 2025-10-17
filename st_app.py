@@ -22,7 +22,7 @@ import pydeck as pdk
 # 1) Page & Theme
 # =============================
 st.set_page_config(
-    page_title="Traffic Analytics — By Category", 
+    page_title="Traffic Analytics — By Category",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -229,12 +229,12 @@ with TAB_TIME:
                     fig.add_trace(go.Scatter(x=ts.index, y=ts['vol_ma'], name=f'{w}-pt MA', line=dict(width=3)))
                     if marks > 0 and len(vol_hi):
                         fig.add_trace(go.Scatter(x=vol_hi.index, y=vol_hi.values, mode='markers+text', name='Highs',
-                                                text=[f"{v:.0f}" for v in vol_hi.values], textposition='middle right',
-                                                marker=dict(size=9, symbol='triangle-up')))
+                                                 text=[f"{v:.0f}" for v in vol_hi.values], textposition='middle right',
+                                                 marker=dict(size=9, symbol='triangle-up')))
                     if marks > 0 and len(vol_lo):
                         fig.add_trace(go.Scatter(x=vol_lo.index, y=vol_lo.values, mode='markers+text', name='Lows',
-                                                text=[f"{v:.0f}" for v in vol_lo.values], textposition='middle right',
-                                                marker=dict(size=9, symbol='triangle-down')))
+                                                 text=[f"{v:.0f}" for v in vol_lo.values], textposition='middle right',
+                                                 marker=dict(size=9, symbol='triangle-down')))
                     fig.update_layout(title=f"Traffic Volume — {focus_year}-{month_num:02d} ({gran})", height=460,
                                       xaxis=dict(rangeslider=dict(visible=True), range=[start, end]), yaxis_title='veh/h',
                                       legend=dict(orientation='h', y=1.05))
@@ -246,12 +246,12 @@ with TAB_TIME:
                     fig.add_trace(go.Scatter(x=ts.index, y=ts['spd_ma'], name=f'{w}-pt MA', line=dict(width=3)))
                     if marks > 0 and len(spd_hi):
                         fig.add_trace(go.Scatter(x=spd_hi.index, y=spd_hi.values, mode='markers+text', name='Highs',
-                                                text=[f"{v:.1f}" for v in spd_hi.values], textposition='middle left',
-                                                marker=dict(size=9, symbol='triangle-up')))
+                                                 text=[f"{v:.1f}" for v in spd_hi.values], textposition='middle left',
+                                                 marker=dict(size=9, symbol='triangle-up')))
                     if marks > 0 and len(spd_lo):
                         fig.add_trace(go.Scatter(x=spd_lo.index, y=spd_lo.values, mode='markers+text', name='Lows',
-                                                text=[f"{v:.1f}" for v in spd_lo.values], textposition='bottom center',
-                                                marker=dict(size=9, symbol='triangle-down')))
+                                                 text=[f"{v:.1f}" for v in spd_lo.values], textposition='bottom center',
+                                                 marker=dict(size=9, symbol='triangle-down')))
                     fig.update_layout(title=f"Average Speed — {focus_year}-{month_num:02d} ({gran})", height=460,
                                       xaxis=dict(rangeslider=dict(visible=True), range=[start, end]), yaxis_title='km/h',
                                       legend=dict(orientation='h', y=1.05))
@@ -301,7 +301,7 @@ with TAB_TIME:
                 fig.add_trace(go.Scatter(x=trend.index, y=trend, name='Trend'), row=2, col=1)
                 fig.add_trace(go.Scatter(x=seas.index, y=seas, name='Seasonal'), row=3, col=1)
                 fig.add_trace(go.Scatter(x=resid.index, y=resid, name='Residuals'), row=4, col=1)
-                
+
                 fig.update_layout(height=800, title_text=f"Decomposition using {algo}", showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -312,7 +312,7 @@ with TAB_TIME:
 # ---------- Spatial Analysis ----------
 with TAB_SPATIAL:
     st.subheader("Map Hotspots + Regional Summary")
-    
+
     if {'latitude', 'longitude', 'traffic_volume'}.issubset(_df.columns):
         map_df = _df[['longitude', 'latitude', 'traffic_volume']].dropna()
         if map_df.empty:
@@ -353,9 +353,10 @@ with TAB_SPATIAL:
                     )
                     tooltip = {"html": "<b>Aggregated Volume in Hex:</b> {elevationValue}"}
 
-
+                # --- MODIFIED SECTION: No API key needed ---
+                # Removed google_maps_api_key logic
+                # The deck uses a default dark background when no provider is specified
                 st.pydeck_chart(pdk.Deck(
-                    map_style='mapbox://styles/mapbox/light-v9',
                     initial_view_state=pdk.ViewState(
                         latitude=map_df['latitude'].mean(),
                         longitude=map_df['longitude'].mean(),
@@ -365,6 +366,8 @@ with TAB_SPATIAL:
                     layers=[layer],
                     tooltip=tooltip
                 ))
+                # --- END OF MODIFIED SECTION ---
+
             with c2:
                 st.info("""
                 **Map Interaction**
@@ -389,7 +392,7 @@ with TAB_SPATIAL:
             incident_count=('incidents', 'sum'),
             record_count=('traffic_volume', 'count')
         ).reset_index().sort_values('total_volume', ascending=False)
-        
+
         c1, c2 = st.columns(2)
         with c1:
             fig = px.bar(agg, x='total_volume', y='region_name', orientation='h', title='Total Volume by Region')
@@ -399,10 +402,10 @@ with TAB_SPATIAL:
             fig = px.pie(agg, names='region_name', values='total_volume', title='Volume Share by Region', hole=0.35)
             fig.update_layout(height=450)
             st.plotly_chart(fig, use_container_width=True)
-        
+
         st.dataframe(agg)
         st.download_button("Download regional summary CSV", data=to_csv_bytes(agg),
-                            file_name=f"{selected_db}_{selected_month}_regional_summary.csv")
+                           file_name=f"{selected_db}_{selected_month}_regional_summary.csv")
     else:
         st.info("No 'region_name' column to aggregate by.")
 
@@ -416,14 +419,14 @@ with TAB_TREND:
         format_func=lambda x: 'Volume' if x == 'traffic_volume' else 'Speed',
         horizontal=True
     )
-    
+
     metric_label = "Median Volume" if selected_metric == 'traffic_volume' else "Median Speed"
     yaxis_title = "veh/h" if selected_metric == 'traffic_volume' else "km/h"
 
     st.markdown("---")
 
     st.subheader(f"Weekday vs. Weekend {metric_label} Variation")
-    
+
     if {'dow', 'hour', selected_metric}.issubset(_df.columns):
         df_trend = _df.copy()
         df_trend['day_type'] = df_trend['dow'].apply(lambda x: 'Weekend' if x >= 5 else 'Weekday')
@@ -435,10 +438,10 @@ with TAB_TREND:
             markers=True, labels={'hour': 'Hour', selected_metric: yaxis_title, 'day_type': 'Day Type'},
             template='plotly_white'
         )
-        
+
         fig_line.add_vline(x=8, line_width=2, line_dash="dash", line_color="grey", annotation_text="AM Peak")
         fig_line.add_vline(x=17, line_width=2, line_dash="dash", line_color="grey", annotation_text="PM Peak")
-        
+
         fig_line.update_layout(
             height=500, title_text='Daily Trend Comparison: Weekday vs. Weekend',
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
@@ -448,20 +451,20 @@ with TAB_TREND:
         st.info("Missing 'dow', 'hour', or selected metric columns for trend chart.")
 
     st.markdown("---")
-    
+
     st.subheader("Hourly Median Speed Heatmap")
 
     if {'dow', 'hour', 'average_speed'}.issubset(_df.columns):
         pivot = _df.pivot_table(index='dow', columns='hour', values='average_speed', aggfunc='median')
         pivot.index = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][:len(pivot.index)]
-        
+
         fig_heatmap = px.imshow(
             pivot, text_auto=True, aspect='auto',
             color_continuous_scale=px.colors.diverging.RdYlGn,
             labels=dict(color="Median Speed (km/h)", x="Hour", y="Day of Week"),
             template='plotly_white'
         )
-        
+
         fig_heatmap.update_traces(textfont_size=10)
         fig_heatmap.update_layout(height=520)
         st.plotly_chart(fig_heatmap, use_container_width=True)
@@ -475,13 +478,13 @@ with TAB_CORR:
     c1, c2, c3 = st.columns([1, 1, 2])
     x_axis = c1.selectbox("X-Axis", ['traffic_volume', 'average_speed', 'incidents'], index=0)
     y_axis = c2.selectbox("Y-Axis", ['traffic_volume', 'average_speed', 'incidents'], index=1)
-    
+
     if x_axis and y_axis:
         if x_axis == y_axis:
             st.warning("Please select two different metrics to compare.")
         else:
             df_sample = _df.sample(min(len(_df), 5000))
-            
+
             fig = px.scatter(
                 df_sample, x=x_axis, y=y_axis, trendline="ols",
                 title=f"Correlation: {x_axis.replace('_', ' ').title()} vs. {y_axis.replace('_', ' ').title()}"
