@@ -34,11 +34,13 @@ st.caption("Focus on the selected month with zoomable visuals. Supports STL seas
 # =============================
 @st.cache_resource
 def get_mongo_client():
+# --- Use Streamlit secrets first, fallback to local .env for dev ---
     load_dotenv()
-    uri = os.getenv("MONGO_URI_TRAFFIC")
+    uri = st.secrets.get("MONGO_URI_TRAFFIC", os.getenv("MONGO_URI_TRAFFIC"))
     if not uri:
-        st.error("MONGO_URI_TRAFFIC not found in .env file!")
-        return None
+        st.error("❌ MONGO_URI_TRAFFIC not found in secrets or .env file!")
+    return None
+
     try:
         client = MongoClient(uri)
         client.admin.command('ping')
