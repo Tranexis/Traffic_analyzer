@@ -35,9 +35,9 @@ st.caption("Focus on the selected month with zoomable visuals. Supports STL seas
 @st.cache_resource
 def get_mongo_client():
     load_dotenv()
-    uri = os.getenv("MONGO_URI")
+    uri = os.getenv("MONGO_URI_TRAFFIC")
     if not uri:
-        st.error("MONGO_URI not found in .env file!")
+        st.error("MONGO_URI_TRAFFIC not found in .env file!")
         return None
     try:
         client = MongoClient(uri)
@@ -50,6 +50,8 @@ def get_mongo_client():
 # =============================
 # 3) Data Load & Prep (cached)
 # =============================
+
+# traffic data standardization
 def _standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     rename_map = {
         'traffic_volume (vehicles/hour)': 'traffic_volume',
@@ -353,10 +355,11 @@ with TAB_SPATIAL:
                     )
                     tooltip = {"html": "<b>Aggregated Volume in Hex:</b> {elevationValue}"}
 
-                # --- MODIFIED SECTION: No API key needed ---
-                # Removed google_maps_api_key logic
-                # The deck uses a default dark background when no provider is specified
+                # --- MODIFIED SECTION: Use pydeck's default light map without an API key ---
                 st.pydeck_chart(pdk.Deck(
+                    # By omitting mapbox_key and setting map_style to None,
+                    # pydeck uses a default key-less light-themed map.
+                    map_style=None,
                     initial_view_state=pdk.ViewState(
                         latitude=map_df['latitude'].mean(),
                         longitude=map_df['longitude'].mean(),
