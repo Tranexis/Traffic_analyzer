@@ -184,7 +184,7 @@ st.markdown("---")
 # 5) Tabs by Category
 # =============================
 TAB_TIME, TAB_SPATIAL, TAB_TREND, TAB_CORR = st.tabs([
-    "⏱️ Time Analysis", "📍 Spatial Analysis", "📈 Trend Analysis", "🔗 Correlation Analysis"
+    "⏱️ Time Analysis", "📍 Spatial Analysis", "📈 Trend Analysis"
 ])
 
 # ---------- Time Analysis ----------
