@@ -45,10 +45,10 @@ def get_mongo_client():
     try:
         client = MongoClient(uri)
         client.admin.command('ping')  # Test connection
-        st.success("✅ Connected successfully.")
+        st.success("✅ Connection successful.")
         return client
     except Exception as e:
-        st.error(f"Failed to connect to MongoDB: {e}")
+        st.error(f"Failed to connect to Database: {e}")
         return None
 
 
