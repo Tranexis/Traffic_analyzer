@@ -32,7 +32,7 @@ st.caption("Focus on the selected month with zoomable visuals. Supports STL seas
 # =============================
 # 2) DB Connection (cached)
 # =============================
-@st.cache_resource
+
 @st.cache_resource
 def get_mongo_client():
     # --- Use Streamlit secrets first, fallback to local .env for dev ---
@@ -479,28 +479,28 @@ with TAB_TREND:
     else:
         st.info("Missing columns for heatmap.")
 
-# ---------- Correlation Analysis ----------
-with TAB_CORR:
-    st.subheader("Correlation between Metrics")
+# # ---------- Correlation Analysis ----------
+# with TAB_CORR:
+#     st.subheader("Correlation between Metrics")
 
-    c1, c2, c3 = st.columns([1, 1, 2])
-    x_axis = c1.selectbox("X-Axis", ['traffic_volume', 'average_speed', 'incidents'], index=0)
-    y_axis = c2.selectbox("Y-Axis", ['traffic_volume', 'average_speed', 'incidents'], index=1)
+#     c1, c2, c3 = st.columns([1, 1, 2])
+#     x_axis = c1.selectbox("X-Axis", ['traffic_volume', 'average_speed', 'incidents'], index=0)
+#     y_axis = c2.selectbox("Y-Axis", ['traffic_volume', 'average_speed', 'incidents'], index=1)
 
-    if x_axis and y_axis:
-        if x_axis == y_axis:
-            st.warning("Please select two different metrics to compare.")
-        else:
-            df_sample = _df.sample(min(len(_df), 5000))
+#     if x_axis and y_axis:
+#         if x_axis == y_axis:
+#             st.warning("Please select two different metrics to compare.")
+#         else:
+#             df_sample = _df.sample(min(len(_df), 5000))
 
-            fig = px.scatter(
-                df_sample, x=x_axis, y=y_axis, trendline="ols",
-                title=f"Correlation: {x_axis.replace('_', ' ').title()} vs. {y_axis.replace('_', ' ').title()}"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+#             fig = px.scatter(
+#                 df_sample, x=x_axis, y=y_axis, trendline="ols",
+#                 title=f"Correlation: {x_axis.replace('_', ' ').title()} vs. {y_axis.replace('_', ' ').title()}"
+#             )
+#             st.plotly_chart(fig, use_container_width=True)
 
-            corr = _df[[x_axis, y_axis]].corr().iloc[0, 1]
-            st.metric(label=f"Pearson Correlation Coefficient", value=f"{corr:.3f}")
-            st.info("The OLS trendline shows the general linear relationship between the two variables.")
-    else:
-        st.info("Please select both X and Y axes.")
+#             corr = _df[[x_axis, y_axis]].corr().iloc[0, 1]
+#             st.metric(label=f"Pearson Correlation Coefficient", value=f"{corr:.3f}")
+#             st.info("The OLS trendline shows the general linear relationship between the two variables.")
+#     else:
+#         st.info("Please select both X and Y axes.")
